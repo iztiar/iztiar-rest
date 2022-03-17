@@ -1,0 +1,42 @@
+{
+  "name": "@iztiar/iztiar-pidusage",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Add a pidUsage interface to every forked feature",
+  "keywords": [
+    "iztiar",
+    "iztiar-plugin",
+    "pidusage"
+  ],
+  "homepage": "https://github.com/iztiar/iztiar-pidusage",
+  "bugs": {
+    "url": "https://github.com/iztiar/iztiar-pidusage/issues",
+    "email": "iztiar-leader@trychlos.org"
+  },
+  "license": "GPL-3.0",
+  "author": "Pierre Wieser <iztiar-leader@trychlos.org> (https://github.com/orgs/iztiar/people/iztiar-0)",
+  "contributors": [],
+  "funding": [],
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/iztiar/iztiar-pidusage.git"
+  },
+  "dependencies": {},
+  "peerDependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">12.x"
+  },
+  "iztiar": {
+    "targets": [
+      "@iztiar/iztiar-core"
+    ]
+  }
+}
