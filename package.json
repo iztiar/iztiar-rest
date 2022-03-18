@@ -1,29 +1,29 @@
 {
-  "name": "@iztiar/iztiar-pidusage",
+  "name": "@iztiar/iztiar-rest",
   "version": "0.1.0",
   "type": "module",
-  "description": "Add a pidUsage interface to every forked feature",
+  "description": "Provide a REST API to Iztiar family",
   "keywords": [
     "iztiar",
     "iztiar-plugin",
     "pidusage"
   ],
-  "homepage": "https://github.com/iztiar/iztiar-pidusage",
+  "homepage": "https://github.com/iztiar/iztiar-rest",
   "bugs": {
-    "url": "https://github.com/iztiar/iztiar-pidusage/issues",
+    "url": "https://github.com/iztiar/iztiar-rest/issues",
     "email": "iztiar-leader@trychlos.org"
   },
   "license": "GPL-3.0",
   "author": "Pierre Wieser <iztiar-leader@trychlos.org> (https://github.com/orgs/iztiar/people/iztiar-0)",
   "contributors": [],
   "funding": [],
-  "main": "./src/index.js",
+  "main": "./src/main.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/main.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/iztiar/iztiar-pidusage.git"
+    "url": "git+ssh://git@github.com/iztiar/iztiar-rest.git"
   },
   "dependencies": {},
   "peerDependencies": {},
