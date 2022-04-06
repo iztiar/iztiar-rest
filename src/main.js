@@ -12,5 +12,5 @@ import { Rest } from './imports.js';
  * @returns {Promise} which must resolves to an IServiceable instance
  */
 export default ( api, card ) => {
-    return new Rest( api, card ).then(( o ) => { return o.IServiceable; });
+    return new Rest( api, card );
 }

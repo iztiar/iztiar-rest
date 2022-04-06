@@ -1,0 +1,12 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Iztiar REST API
+  description: The REST API provided by this Iztiar plugin
+paths:
+  /list:
+    get:
+      description: Returns a list of stuff              
+      responses:
+        '200':
+          description: Successful response

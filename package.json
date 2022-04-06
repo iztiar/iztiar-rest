@@ -6,7 +6,8 @@
   "keywords": [
     "iztiar",
     "iztiar-plugin",
-    "pidusage"
+    "pidusage",
+    "rest"
   ],
   "homepage": "https://github.com/iztiar/iztiar-rest",
   "bugs": {
@@ -25,7 +26,13 @@
     "type": "git",
     "url": "git+ssh://git@github.com/iztiar/iztiar-rest.git"
   },
-  "dependencies": {},
+  "dependencies": {
+    "fastify": "^3.27.4",
+    "fastify-mongodb": "^4.1.1",
+    "fastify-plugin": "^3.0.1",
+    "mongoose": "^6.2.10",
+    "mongoose-int32": "^0.6.0"
+  },
   "peerDependencies": {},
   "devDependencies": {},
   "scripts": {
