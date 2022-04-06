@@ -1,0 +1,21 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/iztiar/iztiar-core/schemas/dbCounters.schema.json",
+    "title": "dbCounters",
+    "description": "the last attributed counters",
+    "type": "object",
+    "properties" : {
+        "name": {
+            "type": "string",
+            "description": "a unique string which identifies the counter"
+        },
+        "lastId": {
+            "type": "integer",
+            "description": "the last attributed identifier"
+        },
+        "updatedAt": {
+            "type": "timestamp",
+            "description": "the last attribution timestamp"
+        }
+    }
+}
