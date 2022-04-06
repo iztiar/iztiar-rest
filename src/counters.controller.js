@@ -1,22 +1,21 @@
 /*
  * counters.controller.js
  */
+import { adm } from './imports.js';
+
 export const counters = {
 
     /**
-     * @param {featureProvider} provider 
-     * @param {fastify} fastify
      * @param {Object} req the request
      * @param {Object} reply the object to reply to
      * @throws {Error}
      * 
      * Reply with the list of at-the-moment-used counters
      */
-    list: function( provider, fastify, req, reply ){
+    list: function( req, reply ){
+        const provider = this.featureProvider;
         const Msg = provider.api().exports().Msg;
-        const utils = provider.api().exports().utils;
-        const counters = fastify.mongo.db.collection( 'counters' );
-
+        const counters = this.mongo.db.collection( 'counters' );
         // projection doesn't seem to work here, so have to filter ourselves
         counters.find().toArray(( err, res ) => {
             if( err ){
@@ -25,26 +24,16 @@ export const counters = {
                 return;
             }
             Msg.debug( 'counters.list().find', res );
-            let result = [];
-            res.every(( r ) => {
-                result.push({
-                    name: r.name,
-                    lastId: r.lastId
-                });
-                return true;
-            });
-            reply.send( result );
+            reply.send( adm.filter( res, [ 'name', 'lastId' ]));
         });
     },
 
     /*
      * Reply with the last-used named counter
      */
-    lastId: function( provider, fastify, req, reply ){
-        const Msg = provider.api().exports().Msg;
-        const utils = provider.api().exports().utils;
-        const counters = fastify.mongo.db.collection( 'counters' );
-
+    lastId: function( req, reply ){
+        const Msg = this.featureProvider.api().exports().Msg;
+        const counters = this.mongo.db.collection( 'counters' );
         counters.findOne( req.params, ( err, res ) => {
             if( err ){
                 reply.send({ 'error': err });
@@ -67,11 +56,10 @@ export const counters = {
     /*
      * Reply with the next to-be-used named counter
      */
-    nextId: function( provider, fastify, req, reply ){
-        const Msg = provider.api().exports().Msg;
-        const utils = provider.api().exports().utils;
-        const counters = fastify.mongo.db.collection( 'counters' );
-
+    nextId: function( req, reply ){
+        const Msg = this.featureProvider.api().exports().Msg;
+        const utils = this.featureProvider.api().exports().utils;
+        const counters = this.mongo.db.collection( 'counters' );
         counters.findOne( req.params, ( err, res ) => {
             if( err ){
                 reply.send({ 'error': err });

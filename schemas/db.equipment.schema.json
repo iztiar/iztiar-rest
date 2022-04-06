@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/iztiar/iztiar-core/schemas/dbEquipment.schema.json",
+    "title": "dbEquipment",
+    "description": "An equipment",
+    "type": "object",
+    "properties" : {
+        "name": {
+            "type": "string",
+            "description": "the equipment friendly name"
+        },
+        "equipId": {
+            "type": "integer",
+            "description": "the equipment identifier"
+        },
+        "className": {
+            "type": "string",
+            "description": "the name of the managing class (aka counter name)"
+        },
+        "classId": {
+            "type": "integer",
+            "description": "the device identifier in the managing class (aka attributed counter value)"
+        },
+        "createdAt": {
+            "type": "timestamp",
+            "description": "the creation timestamp"
+        },
+        "updatedAt": {
+            "type": "timestamp",
+            "description": "the last update timestamp"
+        }
+    }
+}
