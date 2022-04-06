@@ -265,6 +265,9 @@ export class Rest {
         exports.Msg.debug( 'Rest.fillConfig()' );
         _promise = _promise.then(() => {
             let _config = this.feature().config();
+            if( !_config.class ){
+                _config.class = this.constructor.name;
+            }
             if( Object.keys( _config ).includes( 'ITcpServer' ) && !Object.keys( _config.ITcpServer ).includes( 'port' )){
                 _config.ITcpServer.port = Rest.d.ITcpServer.port;
             }

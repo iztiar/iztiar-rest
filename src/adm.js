@@ -12,8 +12,9 @@ export const adm = {
      */
     list: function( provider, fastify, req, reply ){
         reply.send([
-            '/v1/adm/counters',
-            '/v1/adm/counter/next/:name'
+            '/v1/counters',
+            '/v1/counter/:name',
+            '/v1/counter/:name/next'
         ]);
     }
 };
