@@ -3,6 +3,7 @@
  */
 export * from './adm.js';
 export * from './counter.controller.js';
+export * from './counter.model.js';
 export * from './counter.routes.js';
 export * from './equipment.controller.js';
 export * from './equipment.routes.js';

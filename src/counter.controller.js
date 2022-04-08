@@ -1,105 +1,96 @@
 /*
  * counters.controller.js
  */
-import { adm } from './imports.js';
+import { counterModel, adm } from './imports.js';
+import { rest1 } from './rest1.routes.js';
 
-export const counter = {
+export const counterController = {
+
+    /**
+     * @param {Fastify} fastify
+     * @param {} query the query is has read the doc
+     * @param {Object|null} doc the found document, may be null
+     * @returns {Promise} which resolves to the same document, or an empty one
+     */
+    fill: function( fastify, query, doc ){
+        return new Promise(( resolve, reject ) => {
+            if( doc ){
+                return resolve( doc );
+            }
+            return resolve({
+                name: query.name,
+                lastId: 0
+            });
+        });
+    },
 
     /**
      * @param {Object} req the request
      * @param {Object} reply the object to reply to
-     * @throws {Error}
-     * 
-     * Reply with the list of at-the-moment-used counters
+     * Reply with the list of at-the-moment-used counters (which may be empty)
      */
-    list: function( req, reply ){
-        const provider = this.featureProvider;
-        const Msg = provider.api().exports().Msg;
-        const counters = this.mongo.db.collection( 'counters' );
-        // projection doesn't seem to work here, so have to filter ourselves
-        counters.find().toArray(( err, res ) => {
-            if( err ){
-                reply.send({ 'error': err });
-                Msg.error( 'counters.list().find', err );
-                return;
-            }
-            Msg.debug( 'counters.list().find', res );
-            reply.send( adm.filter( res, [ 'name', 'lastId' ]));
-        });
+    rtList: function( req, reply ){
+        counterModel.list( this )
+            .then(( res ) => {
+                const Msg = this.featureProvider.api().exports().Msg;
+                // projection doesn't seem to work here, so have to filter ourselves
+                Msg.debug( 'counters.list().find', res );
+                reply.send( adm.filter( res, [ 'name', 'lastId' ]));
+            });
     },
 
     /*
      * Reply with the last-used named counter
      */
-    lastId: function( req, reply ){
-        const Msg = this.featureProvider.api().exports().Msg;
-        const counters = this.mongo.db.collection( 'counters' );
-        counters.findOne( req.params, ( err, res ) => {
-            if( err ){
-                reply.send({ 'error': err });
-                Msg.error( 'counters.lastId().findOne', err );
-                return;
-            }
-            let o = {
-                name: req.params.name,
-                lastId: 0
-            };
-            if( !res ){
-                o.lastId = 'never allocated';
-            } else {
-                o.lastId = res.lastId;
-            }
-            reply.send( o );
-        });
+    rtLastId: function( req, reply ){
+        const query = { name: req.params.name };
+        counterModel.read( this, query )
+            .then(( res ) => { return counterController.fill( this, query, res ); })
+            .then(( res ) => {
+                reply.send( o );
+            });
     },
 
     /*
      * Reply with the next to-be-used named counter
      */
-    nextId: function( req, reply ){
+    rtNextId: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
-        const utils = this.featureProvider.api().exports().utils;
-        const counters = this.mongo.db.collection( 'counters' );
-        counters.findOne( req.params, ( err, res ) => {
-            if( err ){
-                reply.send({ 'error': err });
-                Msg.error( 'counters.nextId().findOne', err );
-                return;
-            }
-            let nextId = 0;
-            if( !res ){
-                counters.insertOne({
-                    name: req.params.name,
-                    lastId: 1,
-                    updatedAt: Date.now()
-                }, ( err, res ) => {
-                    if( err ){
-                        reply.send({ 'error': err });
-                        Msg.error( 'counters.nextId().insertOne', err );
-                        return;
-                    }
-                    Msg.debug( 'counters.nextId().insertOne', res );
-                });
-                nextId = 1;
-            } else {
-                if( utils.isInt( res.lastId )){
-                    nextId = 1+res.lastId;
-                } else {
-                    nextId = 1;
-                }
-                counters.updateOne( req.params, { $set: { lastId: nextId, updatedAt: Date.now() }}, ( err, res ) => {
-                    if( err ){
-                        reply.send({ 'error': err });
-                        Msg.error( 'counters.nextId().updateOne', err );
-                        return;
-                    }
-                    Msg.debug( 'counters.nextId().updateOne', res );
-                });
-            }
-            reply.send({
-                name: req.params.name,
-                nextId: nextId
+        const query = { name: req.params.name };
+        counterModel.read( this, query )
+            .then(( res ) => { return counterController.fill( this, query, res ); })
+            .then(( res ) => {
+                res.lastId += 1;
+                return counterModel.write( this, res );
+            })
+            .then(( res ) => {
+                reply.send( adm.filter( res, [ 'name', 'lastId' ]));
             });
-        });
+    },
+
+    /*
+     * Set the lastId to the given value BUT IF AND ONLY IF this given value is at least equal to the existing lastId
+     * Expects "body=<id>"
+     * Reply with the new lastId value
+     */
+    rtSetId: function( req, reply ){
+        const Msg = this.featureProvider.api().exports().Msg;
+        const query = { name: req.params.name };
+        counterModel.read( this, query )
+            .then(( res ) => { return counterController.fill( this, query, res ); })
+            .then(( res ) => {
+                const newId = 0 + req.body;
+                Msg.debug( 'counterController.setId() lastId='+res.lastId, 'newId='+newId );
+                if( res.lastId > 0 && res.lastId < newId ){
+                    Msg.debug( 'counterController.setId() setting lastId to newId' );
+                    res.lastId = newId;
+                    return counterModel.write( this, res );
+                } else {
+                    return Promise.resolve( res );
+                }
+            })
+            .then(( res ) => {
+                reply.send( adm.filter( res, [ 'name', 'lastId' ]));
+            });
     }
 };

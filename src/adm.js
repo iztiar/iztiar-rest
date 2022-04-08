@@ -12,7 +12,11 @@ export const adm = {
      */
     filter: function( input, columns ){
         let result = [];
-        input.every(( i ) => {
+        let _array = input;
+        if( !Array.isArray( input )){
+            _array = [ input ];
+        }
+        _array.every(( i ) => {
             let o = {};
             columns.every(( c ) => {
                 o[c] = i[c];

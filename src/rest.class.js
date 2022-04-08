@@ -398,6 +398,7 @@ export class Rest {
             });
             mongo.setConnect( this, this._fastServer );
             rest1.setRoutes( this, this._fastServer );
+            //this._fastServer.register( import( 'fastify-formbody' ));
             this._fastServer.listen( _conf.port, _conf.host, ( e, addr ) => {
                 if( e ){
                     this._fastServer.log.error( e );
