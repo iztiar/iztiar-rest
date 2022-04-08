@@ -2,8 +2,6 @@
  * counters.model.js
  *  Handle database model
  */
-import { adm } from './imports.js';
-
 export const counterModel = {
 
     /**

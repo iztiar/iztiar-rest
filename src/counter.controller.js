@@ -2,7 +2,6 @@
  * counters.controller.js
  */
 import { counterModel, adm } from './imports.js';
-import { rest1 } from './rest1.routes.js';
 
 export const counterController = {
 
@@ -34,7 +33,7 @@ export const counterController = {
             .then(( res ) => {
                 const Msg = this.featureProvider.api().exports().Msg;
                 // projection doesn't seem to work here, so have to filter ourselves
-                Msg.debug( 'counters.list().find', res );
+                Msg.debug( 'counterController.rtList()', res );
                 reply.send( adm.filter( res, [ 'name', 'lastId' ]));
             });
     },

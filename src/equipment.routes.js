@@ -1,8 +1,12 @@
 /*
  * equipments.routes.js
  */
-import { equipment } from './imports.js';
+import { equipmentController } from './imports.js';
 
 export const equipmentRoutes = [
-    { method:'GET', url:'/equipments', handler:equipment.list },
+    { method:'GET', url:'/equipments',                  handler:equipmentController.rtList },
+    //{ method:'GET', url:'/equipment/name/:name',        handler:equipmentController.rtList },
+    //{ method:'GET', url:'/equipment/class/:class',      handler:equipmentController.rtList },
+    //{ method:'GET', url:'/equipment/zone/:zone',        handler:equipmentController.rtList },
+    //{ method:'PUT', url:'/equipment/class/:class/set',  handler:equipmentController.rtSet },
 ];
