@@ -383,27 +383,33 @@ export class Rest {
         //let pinoInstance = this.api().exports().Logger.logInstance();
         //const customLogger = this.api().exports().Logger;
         //exports.Msg.debug( 'Rest.restStart() calling Fastify pinoInstance=', pinoInstance, 'instance of pino', pinoInstance instanceof pino, 'instance of EventEmitter', pinoInstance instanceof EventEmitter );
-        this._fastServer = Fastify({
-            logger: true,
-            http2: true,
-            https: {
-                ..._conf.tls,
-                ca: this.api().config().core().rootCACert,
-                key: this._serverKey,
-                cert: this._serverCert,
-            }
-        });
-        mongo.setConnect( this, this._fastServer );
-        rest1.setRoutes( this, this._fastServer );
-        this._fastServer.listen( _conf.port, _conf.host, ( e, addr ) => {
-            if( e ){
-                this._fastServer.log.error( e );
-                exports.Msg.error( 'Rest.error', e.name, e.message );
-            } else {
-                this._fastServer.log.info( 'Rest.restStart() fastify log listening', addr );
-                exports.Msg.verbose( 'Rest.restStart() msg log listening', addr );
-            }
-        })
+        try {
+            this._fastServer = Fastify({
+                logger: true,
+                http2: true,
+                https: {
+                    ..._conf.tls,
+                    ca: this.api().config().core().rootCACert,
+                    key: this._serverKey,
+                    cert: this._serverCert,
+                    allowHTTP1: true
+                },
+                ignoreTrailingSlash: true
+            });
+            mongo.setConnect( this, this._fastServer );
+            rest1.setRoutes( this, this._fastServer );
+            this._fastServer.listen( _conf.port, _conf.host, ( e, addr ) => {
+                if( e ){
+                    this._fastServer.log.error( e );
+                    exports.Msg.error( 'Rest.error', e.name, e.message );
+                } else {
+                    this._fastServer.log.info( 'Rest.restStart() fastify log listening', addr );
+                    exports.Msg.verbose( 'Rest.restStart() msg log listening', addr );
+                }
+            });
+        } catch( e ){
+            exports.Msg.error( 'Rest.restStart() Fastfify catch', e );
+        }
     }
 
     /**
