@@ -31,14 +31,33 @@
                     "type": "object",
                     "description": "the IMqttClient configuration"
                 },
-                "Rest": {
+                "REST": {
                     "type": "object",
                     "description": "the REST API configuration",
                     "properties": {
+                        "host": {
+                            "type": "string",
+                            "description": "the hostname to bind to",
+                            "default": "localhost"
+                        },
                         "port": {
                             "type": "integer",
                             "description": "the listening TCP port",
                             "default": 24011
+                        },
+                        "tls": {
+                            "type": "object",
+                            "description": "TLS options",
+                            "properties": {
+                                "cert": {
+                                    "type": "string",
+                                    "description": "path to the server certificate"
+                                },
+                                "key": {
+                                    "type": "string",
+                                    "description": "path to the server private key"
+                                }
+                            }
                         }
                     }
                 }

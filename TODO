@@ -11,6 +11,7 @@
  ====
 
     1 2022- 4- 4 fastify should log to iztiar.log instead of the default console
+      2022- 4- 8 neither pinoInstance, nor customLogger, nor options object work :(
 
     2
 

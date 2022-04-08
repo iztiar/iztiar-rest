@@ -3,7 +3,7 @@
  */
 import { adm } from './imports.js';
 
-export const counters = {
+export const counter = {
 
     /**
      * @param {Object} req the request

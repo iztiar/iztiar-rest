@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://github.com/iztiar/iztiar-core/schemas/dbEquipment.schema.json",
+    "$id": "https://github.com/iztiar/iztiar-core/schemas/db.equipment.schema.json",
     "title": "dbEquipment",
     "description": "An equipment",
     "type": "object",
@@ -20,6 +20,10 @@
         "classId": {
             "type": "integer",
             "description": "the device identifier in the managing class (aka attributed counter value)"
+        },
+        "zoneId": {
+            "type": "integer",
+            "description": "the zone identifier the equipment is attached to"
         },
         "createdAt": {
             "type": "timestamp",

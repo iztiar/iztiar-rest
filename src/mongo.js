@@ -13,10 +13,11 @@ export const mongo = {
      * @throw {Error}
      */
     setConnect: function( provider, fastify ){
+        const api = provider.api();
+        const Msg = api.exports().Msg;
+        Msg.debug( 'mongo.setConnect()' );
 
         const _dbConnector = function( fast, opts, done ){
-            const api = provider.api();
-            const Msg = api.exports().Msg;
             const _config = api.config().core();
             Msg.debug( 'mongo.setConnect() database configuration', _config.database );
             if( !_config.database ){

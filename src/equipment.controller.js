@@ -3,7 +3,7 @@
  */
 import { adm } from './imports.js';
 
-export const equipments = {
+export const equipment = {
 
     /**
      * @param {Object} req the request

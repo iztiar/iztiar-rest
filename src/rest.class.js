@@ -1,10 +1,11 @@
 /*
  * Rest class
  */
+import fs from 'fs';
+import path from 'path';
 import Fastify from 'fastify';
-const fastify = Fastify({
-    logger: true
-});
+import pino from 'pino';
+import EventEmitter from 'events';
 
 import { mongo, rest1 } from './imports.js';
 
@@ -14,13 +15,14 @@ export class Rest {
         ITcpServer: {
             port: 24012
         },
-        Rest: {
+        REST: {
+            host: 'localhost',
             port: 24011
         }
     };
 
     /**
-     * The commands which can be received by the Rest via the TCP communication port
+     * The commands which can be received by the Rest instance via the TCP communication port
      * - keys are the commands
      *   > label {string} a short help message
      *   > fn {Function} the execution function (cf. above)
@@ -29,11 +31,11 @@ export class Rest {
      */
     static verbs = {
         'iz.status': {
-            label: 'return the status of this Rest service',
+            label: 'return the status of this REST service',
             fn: Rest._izStatus
         },
         'iz.stop': {
-            label: 'stop this Rest service',
+            label: 'stop this REST service',
             fn: Rest._izStop,
             end: true
         }
@@ -60,6 +62,13 @@ export class Rest {
 
     // when this feature has started
     _started = null;
+
+    // the fastify server
+    _fastServer = null;
+
+    // TLS certificates
+    _serverKey = null;
+    _serverCert = null;
 
     /**
      * @param {engineApi} api the engine API as described in engine-api.schema.json
@@ -271,12 +280,25 @@ export class Rest {
             if( Object.keys( _config ).includes( 'ITcpServer' ) && !Object.keys( _config.ITcpServer ).includes( 'port' )){
                 _config.ITcpServer.port = Rest.d.ITcpServer.port;
             }
-            if( !Object.keys( _config ).includes( 'Rest' )){
-                throw new Error( 'Rest.fillConfig() expects a \'Rest\' configuration group' );
+            if( !Object.keys( _config ).includes( 'REST' )){
+                throw new Error( 'Rest.fillConfig() expects a \'REST\' configuration group' );
             }
-            if( !_config.Rest.port ){
-                _config.Rest.port = Rest.d.Rest.port;
+            if( !_config.REST.host ){
+                _config.REST.host = Rest.d.REST.host;
             }
+            if( !_config.REST.port ){
+                _config.REST.port = Rest.d.REST.port;
+            }
+            // the REST server requires TLS connections
+            // reading server key and cert files may also throw exceptions, which is acceptable here
+            if( !_config.REST.tls || !_config.REST.tls.key || !_config.REST.tls.cert ){
+                throw new Error( 'REST server requires both private key and certificate' );
+            }
+            if( !Object.keys( _config.REST.tls ).includes( 'requestCert' )){
+                _config.REST.tls.requestCert = true;
+            }
+            this._serverKey = fs.readFileSync( path.join( this.api().storageDir(), _config.REST.tls.key ));
+            this._serverCert = fs.readFileSync( path.join( this.api().storageDir(), _config.REST.tls.cert ))
         });
         return _promise;
     }
@@ -312,7 +334,7 @@ export class Rest {
                     module: featCard.module(),
                     class: featCard.class(),
                     pids: [ process.pid ],
-                    ports: [ featCard.config().ITcpServer.port, featCard.config().Rest.port ],
+                    ports: [ featCard.config().ITcpServer.port, featCard.config().REST.port ],
                     runfile: self.IRunFile.runFile( _serviceName ),
                     started: self._started
                 };
@@ -355,12 +377,31 @@ export class Rest {
      */
     restStart(){
         const exports = this.api().exports();
-        mongo.setConnect( this, fastify );
-        rest1.setRoutes( this, fastify );
-        fastify.listen( this.feature().config().Rest.port, ( e, addr ) => {
+        exports.Msg.debug( 'Rest.restStart()' );
+        const _conf = this.feature().config().REST;
+        exports.Msg.debug( 'Rest.restStart() calling Fastify with conf=', _conf );
+        //let pinoInstance = this.api().exports().Logger.logInstance();
+        //const customLogger = this.api().exports().Logger;
+        //exports.Msg.debug( 'Rest.restStart() calling Fastify pinoInstance=', pinoInstance, 'instance of pino', pinoInstance instanceof pino, 'instance of EventEmitter', pinoInstance instanceof EventEmitter );
+        this._fastServer = Fastify({
+            logger: true,
+            http2: true,
+            https: {
+                ..._conf.tls,
+                ca: this.api().config().core().rootCACert,
+                key: this._serverKey,
+                cert: this._serverCert,
+            }
+        });
+        mongo.setConnect( this, this._fastServer );
+        rest1.setRoutes( this, this._fastServer );
+        this._fastServer.listen( _conf.port, _conf.host, ( e, addr ) => {
             if( e ){
-                fastify.log.error( e );
+                this._fastServer.log.error( e );
                 exports.Msg.error( 'Rest.error', e.name, e.message );
+            } else {
+                this._fastServer.log.info( 'Rest.restStart() fastify log listening', addr );
+                exports.Msg.verbose( 'Rest.restStart() msg log listening', addr );
             }
         })
     }
