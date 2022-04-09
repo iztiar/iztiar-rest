@@ -3,4 +3,7 @@ GET method
 wget2 --quiet -O - -S -4 --certificate certs/development/RestClient.crt --private-key certs/development/RestClient.key --ca-certificate certs/development/ca.crt --method GET  https://xps13.trychlos.lan:24011/v1/counter/mySensors
 
 PUT method
-wget2 --quiet -O - -S -4 --certificate certs/development/RestClient.crt --private-key certs/development/RestClient.key --ca-certificate certs/development/ca.crt --header "content-type: text/plain" --method PUT  https://xps13.trychlos.lan:24011/v1/counter/toto/set --body-data "id=1"
+wget2 --quiet -O - -S -4 --certificate certs/development/RestClient.crt --private-key certs/development/RestClient.key --ca-certificate certs/development/ca.crt --header "content-type: application/json" --method PUT  https://xps13.trychlos.lan:24011/v1/counter/toto/set --body-data '{"id":"1"}'
+
+MongoSh
+cf. iztiar-core/db/README

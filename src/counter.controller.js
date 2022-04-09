@@ -5,9 +5,9 @@ import { counterModel, adm } from './imports.js';
 
 export const counterController = {
 
-    /**
+    /*
      * @param {Fastify} fastify
-     * @param {} query the query is has read the doc
+     * @param {Object} query the query that has read the doc
      * @param {Object|null} doc the found document, may be null
      * @returns {Promise} which resolves to the same document, or an empty one
      */
@@ -18,9 +18,26 @@ export const counterController = {
             }
             return resolve({
                 name: query.name,
+                createdAt: Date.now(),
                 lastId: 0
             });
         });
+    },
+
+    /*
+     * @param {Fastify} fastify
+     * @param {String} name the named counter
+     * @returns {Promise} which resolve with the updated document
+     */
+    nextId: function( fastify, name ){
+        const Msg = fastify.featureProvider.api().exports().Msg;
+        const query = { name: name };
+        return counterModel.read( fastify, query )
+            .then(( res ) => { return counterController.fill( fastify, query, res ); })
+            .then(( res ) => {
+                res.lastId += 1;
+                return counterModel.write( fastify, res );
+            });
     },
 
     /**
@@ -55,13 +72,7 @@ export const counterController = {
      */
     rtNextId: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
-        const query = { name: req.params.name };
-        counterModel.read( this, query )
-            .then(( res ) => { return counterController.fill( this, query, res ); })
-            .then(( res ) => {
-                res.lastId += 1;
-                return counterModel.write( this, res );
-            })
+        counterController.nextId( this, req.params.name )
             .then(( res ) => {
                 reply.send( adm.filter( res, [ 'name', 'lastId' ]));
             });
@@ -69,7 +80,7 @@ export const counterController = {
 
     /*
      * Set the lastId to the given value BUT IF AND ONLY IF this given value is at least equal to the existing lastId
-     * Expects "body=<id>"
+     * Expects body-data: {id:<id>}
      * Reply with the new lastId value
      */
     rtSetId: function( req, reply ){
@@ -78,7 +89,7 @@ export const counterController = {
         counterModel.read( this, query )
             .then(( res ) => { return counterController.fill( this, query, res ); })
             .then(( res ) => {
-                const newId = 0 + req.body;
+                const newId = 0 + req.body.id;
                 Msg.debug( 'counterController.setId() lastId='+res.lastId, 'newId='+newId );
                 if( res.lastId > 0 && res.lastId < newId ){
                     Msg.debug( 'counterController.setId() setting lastId to newId' );

@@ -1,0 +1,29 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/iztiar/iztiar-core/schemas/db.zone.schema.json",
+    "title": "dbZone",
+    "description": "A zone, aka an arbitrary regroupment of equipments or other zones",
+    "type": "object",
+    "properties" : {
+        "name": {
+            "type": "string",
+            "description": "the zone friendly name"
+        },
+        "zoneId": {
+            "type": "integer",
+            "description": "the zone identifier"
+        },
+        "parentId": {
+            "type": "integer",
+            "description": "the parent zone identifier"
+        },
+        "createdAt": {
+            "type": "timestamp",
+            "description": "the creation timestamp"
+        },
+        "updatedAt": {
+            "type": "timestamp",
+            "description": "the last update timestamp"
+        }
+    }
+}
