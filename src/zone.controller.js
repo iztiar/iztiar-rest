@@ -7,23 +7,7 @@ import { zoneModel, adm } from './imports.js';
 
 export const zoneController = {
 
-    /**
-     * @param {Fastify} fastify
-     * @param {} query the query that has read the doc
-     * @param {Object|null} doc the found document, may be null
-     * @returns {Promise} which resolves to the same document, or an empty one
-     */
-    fill: function( fastify, query, doc ){
-        return new Promise(( resolve, reject ) => {
-            if( doc ){
-                return resolve( doc );
-            }
-            return resolve({
-                name: query.name,
-                lastId: 0
-            });
-        });
-    },
+    COLUMNS: [ 'name', 'zoneId', 'parentId', 'parentName', 'createdAt', 'updatedAt' ],
 
     /**
      * @param {Object} req the request
@@ -36,36 +20,81 @@ export const zoneController = {
                 const Msg = this.featureProvider.api().exports().Msg;
                 // projection doesn't seem to work here, so have to filter ourselves
                 Msg.debug( 'zoneController.rtList()', res );
-                reply.send( adm.filter( res, [ 'name', 'zoneId', 'parentName' ]));
+                reply.send( adm.filter( res, zoneController.COLUMNS ));
             });
     },
 
     /*
-     * Reply with the last-used named counter
+     * Reply with the found zone
      */
     rtbyName: function( req, reply ){
         const query = { name: req.params.name };
-        zoneModel.read( this, query )
-            .then(( res ) => { return zoneController.fill( this, query, res ); })
+        zoneModel.readOne( this, query )
             .then(( res ) => {
-                reply.send( o );
+                if( res ){
+                    reply.send({ OK: adm.filter( res, zoneController.COLUMNS )});
+                } else {
+                    reply.send({ ERR: query.name+': zone not found' });
+                }
             });
     },
 
     /*
-     * Reply with the next to-be-used named counter
+     * Reply with the list of zones which have this named parent, may be empty
+     *  name may be empty: returns zones which do not have a parent
      */
     rtbyParent: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
-        const query = { name: req.params.name };
-        zoneModel.read( this, query )
-            .then(( res ) => { return zoneController.fill( this, query, res ); })
+        let query = { name: req.params.name };
+        let replySent = false;
+        let _promise = Promise.resolve( true );
+        if( query.name.length ){
+            _promise = _promise
+                .then(( res ) => {
+                    return zoneModel.readOne( this, query );
+                })
+                .then(( res ) => {
+                    if( res ){
+                        query = { parentId: res.zoneId };
+                        return Promise.resolve( true );
+                    } else {
+                        reply.send({ ERR: query.name+': zone not found' });
+                        replySent = true;
+                        return Promise.resolve( null );
+                    }
+                });
+        } else {
+            query = { parentId: 0 };
+        }
+        if( !replySent ){
+            _promise = _promise
+                .then(( res ) => {
+                    return zoneModel.readAll( this, query );
+                })
+                .then(( res ) => {
+                    if( res ){
+                        reply.send({ OK: adm.filter( res, zoneController.COLUMNS )});
+                    } else if( !replySent ){
+                        Msg.verbose( 'zoneController.rtbyParent() sending empty array' );
+                        reply.send({ OK: []});
+                    }
+                });
+        }
+    },
+
+    /*
+     * Reply with OK
+     */
+    rtDelete: function( req, reply ){
+        const Msg = this.featureProvider.api().exports().Msg;
+        let query = { name: req.params.name };
+        zoneModel.delete( this, query )
             .then(( res ) => {
-                res.lastId += 1;
-                return zoneModel.write( this, res );
-            })
-            .then(( res ) => {
-                reply.send( adm.filter( res, [ 'name', 'lastId' ]));
+                if( res ){
+                    reply.send({ OK: query.name+': deleted zone' });
+                } else {
+                    reply.send({ ERR: query.name+': zone not found' });
+                }
             });
     },
 

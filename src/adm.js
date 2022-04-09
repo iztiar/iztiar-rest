@@ -25,7 +25,7 @@ export const adm = {
             result.push( o );
             return true;
         });
-        return result;
+        return Array.isArray( input ) ? result : result[0];
     },
 
     /**
