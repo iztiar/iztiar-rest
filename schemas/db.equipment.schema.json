@@ -15,15 +15,24 @@
         },
         "className": {
             "type": "string",
-            "description": "the name of the managing class (aka counter name)"
+            "description": "the name of the managing class"
         },
         "classId": {
             "type": "integer",
-            "description": "the device identifier in the managing class (aka attributed counter value)"
+            "description": "the device identifier in the managing class"
         },
         "zoneId": {
             "type": "integer",
             "description": "the zone identifier the equipment is attached to"
+        },
+        "powerSource": {
+            "type": "string",
+            "properties": "source of the power for this equipment",
+            "enum": [ "sector", "battery" ]
+        },
+        "powerType": {
+            "type": "string",
+            "properties": "type of used batteries (if any)"
         },
         "createdAt": {
             "type": "timestamp",

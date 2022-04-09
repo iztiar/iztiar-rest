@@ -6,7 +6,7 @@ export const zoneModel = {
 
     COLLECTION: 'zones',
 
-    // returns a '$lookup' aggregate object array which adds the 'parentName' to the ooutput documents set
+    // returns a '$lookup' aggregate object array which adds the 'parentName' to the output documents set
     _lookup: function( query ){
         if( !query ){
             query = {};
@@ -36,7 +36,7 @@ export const zoneModel = {
         }]
     },
 
-    /**
+    /*
      * @param {Fastify} fastify
      * @param {Object} query the query
      * @returns {Promise} which resolves to the array of requested documents, or null
