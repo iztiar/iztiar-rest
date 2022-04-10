@@ -1,29 +1,79 @@
 /*
  * counters.controller.js
  */
-import { counterController, zoneModel, adm } from './imports.js';
+import { counterController, equipmentModel, zoneModel, adm } from './imports.js';
 
 export const zoneController = {
 
     COLUMNS: [ 'name', 'zoneId', 'parentId', 'parentName', 'createdAt', 'updatedAt' ],
 
-    /*
+    /**
+     * @returns {Promise} which resolves to true|false
+     */
+    isDeletableById: function( fastify, id ){
+        const Msg = fastify.featureProvider.api().exports().Msg;
+        let query = { zoneId: id };
+        if( id <= 0 ){
+            // invalid id: cannot be deleted
+            return Promise.resolve( false );
+        }
+        return zoneModel.readOne( fastify, query )
+            .then(( res ) => {
+                if( !res ){
+                    // doesn't exist: cannot be deleted
+                    return Promise.resolve( false );
+                }
+            })
+            .then(( res ) => {
+                if( res ){
+                    query = { parentId: id };
+                    return zoneModel.readAll( fastify, query );
+                }
+            })
+            .then(( res ) => {
+                if( !res.length > 0 ){
+                    // at least one child zone: cannot be deleted
+                    return Promise.resolve( false );
+                }
+            })
+            .then(( res ) => {
+                if( res ){
+                    query = { zoneId: id };
+                    return equipmentModel.readAll( fastify, query );
+                }
+            })
+            .then(( res ) => {
+                if( !res.length > 0 ){
+                    // at least one child zone: cannot be deleted
+                    return Promise.resolve( false );
+                }
+            })
+            .then(( res ) => {
+                return Promise.resolve( res );
+            });
+    },
+
+    /**
      * Reply with OK
      */
     rtDelete: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
-        let query = { name: req.params.name };
-        zoneModel.delete( this, query )
-            .then(( res ) => {
-                if( res ){
-                    reply.send({ OK: query.name+': deleted zone' });
-                } else {
-                    reply.send({ ERR: query.name+': zone not found' });
-                }
-            });
+        if( !req.params.name.length ){
+            reply.send({ ERR: 'Empty zone name ignored' });
+        } else {
+            let query = { name: req.params.name };
+            zoneModel.delete( this, query )
+                .then(( res ) => {
+                    if( res ){
+                        reply.send({ OK: query.name+': deleted zone' });
+                    } else {
+                        reply.send({ ERR: query.name+': zone not found' });
+                    }
+                });
+        }
     },
 
-    /*
+    /**
      * Reply with the found zone
      */
     rtGetByName: function( req, reply ){
@@ -38,7 +88,7 @@ export const zoneController = {
             });
     },
 
-    /*
+    /**
      * Reply with the list of zones which have this named parent, may be empty
      *  name may be empty: returns zones which do not have a parent
      */
@@ -96,7 +146,7 @@ export const zoneController = {
             });
     },
 
-    /*
+    /**
      * Create/Update a zone
      * Expects "body=JSON data"
      * Reply with the OK: created/updated doc or ERR: reason

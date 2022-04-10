@@ -13,15 +13,19 @@ export const equipmentController = {
      */
     rtDelete: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
-        let query = { name: req.params.name };
-        equipmentModel.delete( this, query )
-            .then(( res ) => {
-                if( res ){
-                    reply.send({ OK: query.name+': deleted equipment' });
-                } else {
-                    reply.send({ ERR: query.name+': equipment not found' });
-                }
-            });
+        if( !req.params.name.length ){
+            reply.send({ ERR: 'Empty equipment name ignored' });
+        } else {
+            let query = { name: req.params.name };
+            equipmentModel.delete( this, query )
+                .then(( res ) => {
+                    if( res ){
+                        reply.send({ OK: query.name+': deleted equipment' });
+                    } else {
+                        reply.send({ ERR: query.name+': equipment not found' });
+                    }
+                });
+        }
     },
 
     /**
@@ -127,6 +131,7 @@ export const equipmentController = {
      * Expects "body=JSON data"
      * Reply with the OK: created/updated doc or ERR: reason
      * Can be updated: name, zone, class name and id, power source and type
+     * May have a sub-document with the className as key
      */
     rtSet: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
@@ -271,6 +276,23 @@ export const equipmentController = {
                     if( Object.keys( req.body ).includes( 'classId' ) && doc.classId !== req.body.classId ){
                         set.classId = req.body.classId;
                         doc.classId = req.body.classId;
+                    }
+                }
+            })
+            // does it have a sub-document ?
+            .then(( res ) => {
+                if( !replySent ){
+                    if( doc.className ){
+                        if( Object.keys( req.body ).includes( doc.className )){
+                            doc[doc.className] = {
+                                ...doc[doc.className],
+                                ...req.body[doc.className]
+                            };
+                            set[doc.className] = {
+                                ...doc[doc.className],
+                                ...req.body[doc.className]
+                            };
+                        }
                     }
                 }
             })

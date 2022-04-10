@@ -2,6 +2,7 @@
  * counters.model.js
  *  Handle database model
  */
+
 export const zoneModel = {
 
     COLLECTION: 'zones',
