@@ -9,12 +9,188 @@ export const equipmentController = {
     powerSources: [ 'sector', 'battery' ],
 
     /*
+     * Retrieves either an existing document, or a new one
+     * @returns {Promise} which resolves with an object { isNew, doc }
+     */
+    _getDocument: function( fastify, query ){
+        const Msg = fastify.featureProvider.api().exports().Msg;
+        let answer = {
+            doc: null,
+            isNew: false
+        };
+        // does the equipment already exist ?
+        return equipmentModel.readOne( fastify, query )
+            // if the equipment doesn't exist yet, then get the next id
+            .then(( res ) => {
+                Msg.debug( 'equipmentController._getDocument() readOne=', res );
+                if( res ){
+                    answer.doc = { ...res };
+                    return Promise.resolve( null );
+                } else {
+                    return counterController.nextId( fastify, 'equipment' );
+                }
+            })
+            // initialize a new document
+            .then(( res ) => {
+                Msg.debug( 'equipmentController._getDocument() res=', res );
+                if( res ){
+                    answer.doc = {
+                        name: '',
+                        equipId: res.lastId,
+                        className: '',
+                        classId: 0,
+                        zoneId: 0,
+                        powerSource: '',
+                        powerType: '',
+                        createdAt: Date.now()
+                    };
+                    answer.isNew = true;
+                }
+                return Promise.resolve( answer );
+            });
+    },
+
+    /*
+     * check the requested updates
+     *  entering with work = {
+     *      doc: current or new document
+     *      set: update to later send to mongo.update()
+     *      isNew: true|false
+     *  }
+     * @returns {Promise} which resolves with an object work = {
+     *      doc:
+     *      set:
+     *      isNew:
+     *      ERR: reason
+     *  }
+     * Can be updated: name, zone, class name and id, power source and type
+     * May have a sub-document with the className as key
+     */
+    _setUpdate: function( fastify, work, update ){
+        const Msg = fastify.featureProvider.api().exports().Msg;
+        // fields that we want check before update
+        const fields = [ 'name', 'zoneId', 'powerSource' ];
+        return Promise.resolve( true )
+            // if a name update is requested, check that the new name doesn't already exist
+            //  unchanged name is just ignored
+            //  changing the name of a new doc is wrong
+            .then(() => {
+                if( Object.keys( update ).includes( 'name' )){
+                    const _newName = update.name;
+                    if( !_newName || !_newName.length ){
+                        work.ERR = 'Refusing to update to an empty equipment name';
+                        return Promise.resolve( work );
+                    }
+                    if( _newName != work.doc.name ){
+                        if( work.isNew ){
+                            work.ERR = 'Refusing to update the name of a just creating document';
+                            return Promise.resolve( work );
+                        }
+                        return equipmentModel.readOne( this, { name: _newName })
+                            .then(( res ) => {
+                                if( res ){
+                                    work.ERR = 'Refusing to update to an already existing name: '+update.name;
+                                    return Promise.resolve( work );
+                                } else {
+                                    work.set.name = _newName;
+                                    work.doc.name = _newName;
+                                }
+                            });
+                    }
+                }
+            })
+            // if a zone update is requested, check that it exists (or zero to clear)
+            .then(() => {
+                if( !work.ERR ){
+                    if( Object.keys( update ).includes( 'zoneId' )){
+                        const _newZone = update.zoneId;
+                        if( _newZone != work.doc.zoneId ){
+                            // clearing the zone
+                            if( !_newZone ){
+                                work.set.zoneId = 0;
+                                work.doc.zoneId = 0;
+                                work.doc.zoneName = '';
+                            } else {
+                                return zoneModel.readOne( this, { zoneId: _newZone })
+                                    .then(( res ) => {
+                                        if( res ){
+                                            work.set.zoneId = _newZone;
+                                            work.doc.zoneId = _newZone;
+                                            work.doc.zoneName = res.name;
+                                        } else {
+                                            work.ERR = 'New zone \''+_newZone+'\'doesn\'t exist, update refused';
+                                            return Promise.resolve( work );
+                                        }
+                                    });
+                            }
+                        }
+                    }
+                }
+            })
+            // if a power source update is requested, check that it belongs to the defined enum
+            //  note that changing from battery to sector doesn't clear the powerType in the database
+            //  in case of a goback on this update, we will find again the previous (expected correct) powerType value
+            .then(() => {
+                if( !work.ERR ){
+                    if( Object.keys( update ).includes( 'powerSource' )){
+                        let _value = update.powerSource;
+                        if( !equipmentController.powerSources.includes( _value )){
+                            work.ERR = 'Unmanaged power source \''+_value+'\', update refused';
+                            return Promise.resolve( work );
+                        } else if( work.doc.powerSource !== _value ){
+                            work.doc.powerSource = _value;
+                            work.set.powerSource = _value;
+                        }
+                    }
+                }
+            })
+            // does it have other fields or a sub-document ?
+            .then(() => {
+                if( !work.ERR ){
+                    Object.keys( update ).every(( k ) => {
+                        if( !fields.includes( k )){
+                            if( typeof update[k] === 'object' ){
+                                work.doc[k] = {
+                                    ...work.doc[k],
+                                    ...update[k]
+                                };
+                                work.set[k] = {
+                                    ...work.doc[k],
+                                    ...update[k]
+                                };
+                            } else if( work.doc[k] !== update[k] ){
+                                work.doc[k] = update[k];
+                                work.set[k] = update[k];
+                            }
+                        }
+                        return true;
+                    });
+                    return Promise.resolve( work );
+                }
+            })
+            // all checks done, upsert the doc
+            .then(( res ) => {
+                Msg.debug( 'equipmentController._setUpdate() work=', work );
+                if( !work.ERR ){
+                    if( work.isNew || Object.keys( work.set ).length > 0 ){
+                        return equipmentModel.write( fastify, { name: work.doc.name }, work.set );
+                    } else {
+                        Msg.verbose( 'equipmentController._setUpdate() ignoring empty update set' );
+                    }
+                }
+            })
+            .then(() => {
+                return Promise.resolve( work );
+            });
+    },
+
+    /**
      * Reply with OK
      */
     rtDelete: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
-        if( !req.params.name.length ){
-            reply.send({ ERR: 'Empty equipment name ignored' });
+        if( !req.params.name || !req.params.name.length ){
+            reply.send({ ERR: 'Empty equipment name, ignoring request' });
         } else {
             let query = { name: req.params.name };
             equipmentModel.delete( this, query )
@@ -130,10 +306,8 @@ export const equipmentController = {
      * @param {Object} reply the object to reply to
      * Expects "body=JSON data"
      * Reply with the OK: created/updated doc or ERR: reason
-     * Can be updated: name, zone, class name and id, power source and type
-     * May have a sub-document with the className as key
      */
-    rtSet: function( req, reply ){
+     rtSetByClass: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
         const query = { name: req.params.name };
         let doc = null;
@@ -310,6 +484,46 @@ export const equipmentController = {
             .then(( res ) => {
                 if( !replySent ){
                     reply.send({ OK: doc });
+                }
+            });
+    },
+
+    /**
+     * Create/Update an equipment
+     * @param {Object} req the request
+     * @param {Object} reply the object to reply to
+     * Expects "body=JSON data"
+     * Reply with the OK: created/updated doc or ERR: reason
+     * Can be updated: name, zone, class name and id, power source and type
+     * May have a sub-document with the className as key
+     */
+    rtSetByName: function( req, reply ){
+        const Msg = this.featureProvider.api().exports().Msg;
+        if( !req.params.name || !req.params.name.length ){
+            reply.send({ ERR: 'Empty equipment name, ignoring request' });
+            return;
+        }
+        let work = {};
+        equipmentController._getDocument( this, { name: req.params.name })
+            .then(( res ) => {
+                work = { ...res };
+                if( work.isNew ){
+                    work.doc.name = req.params.name;
+                    work.set = { ...work.doc };
+                } else {
+                    work.set = {};
+                }
+                return Promise.resolve( work );
+            })
+            .then(() => {
+                return equipmentController._setUpdate( this, work, req.body );
+            })
+            .then(( res ) => {
+                Msg.debug( 'equipmentController.rtSetByName() res=', res );
+                if( res.ERR ){
+                    reply.send({ ERR: res.ERR });
+                } else {
+                    reply.send({ OK: res.doc });
                 }
             });
     }

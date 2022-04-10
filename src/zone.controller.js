@@ -59,7 +59,7 @@ export const zoneController = {
     rtDelete: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
         if( !req.params.name.length ){
-            reply.send({ ERR: 'Empty zone name ignored' });
+            reply.send({ ERR: 'Empty zone name, ignoring request' });
         } else {
             let query = { name: req.params.name };
             zoneModel.delete( this, query )
