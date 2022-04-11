@@ -104,7 +104,7 @@ export const equipmentModel = {
     readAll: function( fastify, query ){
         return equipmentModel._read( fastify, query )
             .then(( res ) => {
-                return Promise.resolve( res );
+                return Promise.resolve( res ? res : [] );
             });
     },
 

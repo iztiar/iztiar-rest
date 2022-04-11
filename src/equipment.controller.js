@@ -69,7 +69,7 @@ export const equipmentController = {
     _setUpdate: function( fastify, work, update ){
         const Msg = fastify.featureProvider.api().exports().Msg;
         // fields that we want check before update
-        const fields = [ 'name', 'zoneId', 'powerSource' ];
+        const fields = [ 'name', 'zoneId', 'powerSource', 'classId' ];
         return Promise.resolve( true )
             // if a name update is requested, check that the new name doesn't already exist
             //  unchanged name is just ignored
@@ -81,8 +81,8 @@ export const equipmentController = {
                         work.ERR = 'Refusing to update to an empty equipment name';
                         return Promise.resolve( work );
                     }
-                    if( _newName != work.doc.name ){
-                        if( work.isNew ){
+                    if( _newName !== work.doc.name ){
+                        if( work.doc.name && work.doc.name.length && work.isNew ){
                             work.ERR = 'Refusing to update the name of a just creating document';
                             return Promise.resolve( work );
                         }
@@ -144,6 +144,18 @@ export const equipmentController = {
                     }
                 }
             })
+            // if a classId is specified, must be an integer
+            .then(() => {
+                if( !work.ERR ){
+                    if( Object.keys( update ).includes( 'classId' )){
+                        let _value = Math.floor( update.classId );
+                        if( work.doc.classId !== _value ){
+                            work.doc.classId = _value;
+                            work.set.classId = _value;
+                        }
+                    }
+                }
+            })
             // does it have other fields or a sub-document ?
             .then(() => {
                 if( !work.ERR ){
@@ -182,6 +194,28 @@ export const equipmentController = {
             .then(() => {
                 return Promise.resolve( work );
             });
+    },
+
+    /*
+     * @returns {Promise} which resolve to a new unique name
+     */
+    _uniqueName: function( fastify, name ){
+        const Msg = fastify.featureProvider.api().exports().Msg;
+        const _fTest = function( test ){
+            return new Promise(( resolve, reject ) => {
+                Msg.debug( 'equipmentController.uniqueName() testing '+test );
+                equipmentModel.readOne( fastify, { name: test })
+                    .then(( res ) => {
+                        Msg.debug( 'equipmentController.uniqueName() res=', res );
+                        if( res ){
+                            return _fTest( test+'1' );
+                        }
+                        Msg.debug( 'equipmentController.uniqueName() resolving with '+test );
+                        resolve( test );
+                    });
+            });
+        };
+        return _fTest( name );
     },
 
     /**
@@ -309,181 +343,47 @@ export const equipmentController = {
      */
      rtSetByClass: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
-        const query = { name: req.params.name };
-        let doc = null;
-        let set = {};
-        let isNew = false;
-        let replySent = false;
-        // does the equipment already exist ?
-        equipmentModel.readOne( this, query )
-            // if the equipment doesn't exist yet, then get the next id
+        if( !req.params.name || !req.params.name.length ){
+            reply.send({ ERR: 'Empty class name, ignoring request' });
+            return;
+        }
+        const utils = this.featureProvider.api().exports().utils;
+        if( !req.params.id || !utils.isInt( req.params.id )){
+            reply.send({ ERR: 'Empty class id, ignoring request' });
+            return;
+        }
+        let work = {};
+        req.params.id = Math.floor( req.params.id );
+        equipmentController._getDocument( this, { className: req.params.name, classId: req.params.id })
             .then(( res ) => {
-                Msg.debug( 'equipmentController.rtSet() readOne=', res, 'body-data=', req.body );
-                if( res ){
-                    doc = { ...res };
-                    return Promise.resolve( null );
+                work = { ...res };
+                if( work.isNew ){
+                    work.doc.className = req.params.name;
+                    work.doc.classId = req.params.id;
+                    work.set = { ...work.doc };
                 } else {
-                    isNew = true;
-                    return counterController.nextId( this, 'equipment' );
+                    work.set = {};
                 }
+                return Promise.resolve( work );
             })
-            // initialize a new document
-            .then(( res ) => {
-                Msg.debug( 'equipmentController.rtSetByName() res2=', res );
-                if( res ){
-                    doc = {
-                        name: query.name,
-                        equipId: res.lastId,
-                        className: '',
-                        classId: 0,
-                        zoneId: 0,
-                        powerSource: '',
-                        powerType: '',
-                        createdAt: Date.now()
-                    };
-                    set = { ...doc };
-                }
-                return Promise.resolve( doc );
-            })
-            // if a name update is requested, check that the new name doesn't already exist
-            //  empty or unchanged name is just ignored
-            //  changing the name of a new doc is wrong
             .then(() => {
-                if( Object.keys( req.body ).includes( 'name' )){
-                    const _newName = req.body.name;
-                    if( _newName.length > 0 && _newName != query.name ){
-                        if( isNew ){
-                            reply.send({ ERR: 'Incompatible names between request and sent data' });
-                            replySent = true;
-                            return Promise.resolve( null );
-                        }
-                        set.name = _newName;
-                        doc.name = _newName;
-                        const _q = { name: _newName }
-                        return equipmentModel.readOne( this, _q );
-                    }
-                }
-                return Promise.resolve( null );
-            })
-            // send error message if new name already exists
-            .then(( res ) => {
-                if( !replySent ){
-                    if( res ){
-                        reply.send({ ERR: 'Name already exists: '+req.body.name });
-                        replySent = true;
-                        return Promise.resolve( null );
-                    }
+                if( work.isNew && !Object.keys( req.body ).includes( 'name' )){
+                    equipmentController._uniqueName( this, work.doc.className+'-'+work.doc.classId )
+                        .then(( res ) => {
+                            work.doc.name = res;
+                            work.set.name = res;
+                        });
                 }
             })
-            // if a zone update is requested, check that it exists (or zero to clear)
-            .then(( res ) => {
-                if( !replySent ){
-                    if( Object.keys( req.body ).includes( 'zoneId' )){
-                        const _newZone = req.body.zoneId;
-                        if( _newZone != doc.zoneId ){
-                            set.zoneId = _newZone;          // may be zero to clear the zone
-                            doc.zoneId = _newZone;
-                            if( _newZone > 0 ){             // if not zero, must exists
-                                const _q = { zoneId: _newZone }
-                                return zoneModel.readOne( this, _q );
-                            }
-                        }
-                    }
-                }
-            })
-            // send error message if new zone doesn't exist
-            .then(( res ) => {
-                if( !replySent ){
-                    if( Object.keys( set ).includes( 'zoneId' )){
-                        if( req.body.zoneId > 0 ){
-                            if( res ){
-                                doc.zoneName = res.name;
-                            } else {
-                                reply.send({ ERR: 'Zone doesn\'t exist: '+req.body.zoneId });
-                                replySent = true;
-                            }
-                        } else {
-                            doc.zoneName = '';
-                        }
-                    }
-                }
-            })
-            // if a power source update is requested, check that it belongs to the defined enum
-            //  note that changing from battery to sector doesn't clear the powerType in the database
-            //  in case of a goback on this update, we will find again the previous (expected correct) powerType value
-            .then(( res ) => {
-                if( !replySent ){
-                    Msg.debug( 'equipmentController.set() req.body.keys=', Object.keys( req.body ));
-                    if( Object.keys( req.body ).includes( 'powerSource' )){
-                        let _source = req.body.powerSource;
-                        if( !equipmentController.powerSources.includes( _source )){
-                            reply.send({ ERR: 'Unmanaged power source: '+_source });
-                            replySent = true;
-                        } else {
-                            doc.powerSource = _source;
-                            set.powerSource = _source;
-                        }
-                    }
-                }
-            })
-            // if a power type update is requested, take it as is
-            .then(( res ) => {
-                if( !replySent ){
-                    if( Object.keys( req.body ).includes( 'powerType' )){
-                        set.powerType = req.body.powerType;
-                        doc.powerType = req.body.powerType;
-                    }
-                }
-            })
-            // if a class name is set, take it as is
-            .then(( res ) => {
-                if( !replySent ){
-                    if( Object.keys( req.body ).includes( 'className' ) && doc.className !== req.body.className ){
-                        set.className = req.body.className;
-                        doc.className = req.body.className;
-                    }
-                }
-            })
-            // if a class id is set, take it as is
-            .then(( res ) => {
-                if( !replySent ){
-                    if( Object.keys( req.body ).includes( 'classId' ) && doc.classId !== req.body.classId ){
-                        set.classId = req.body.classId;
-                        doc.classId = req.body.classId;
-                    }
-                }
-            })
-            // does it have a sub-document ?
-            .then(( res ) => {
-                if( !replySent ){
-                    if( doc.className ){
-                        if( Object.keys( req.body ).includes( doc.className )){
-                            doc[doc.className] = {
-                                ...doc[doc.className],
-                                ...req.body[doc.className]
-                            };
-                            set[doc.className] = {
-                                ...doc[doc.className],
-                                ...req.body[doc.className]
-                            };
-                        }
-                    }
-                }
-            })
-            // all checks done, upsert the doc
-            .then(( res ) => {
-                Msg.debug( 'equipmentController.rtSet() doc=', doc, 'set=', set, 'isNew='+isNew, 'replySent='+replySent );
-                if( !replySent ){
-                    if( isNew || Object.keys( set ).length > 0 ){
-                        return equipmentModel.write( this, query, set );
-                    } else {
-                        Msg.verbose( 'equipmentController.rtSet() ignoring empty update set' );
-                    }
-                }
+            .then(() => {
+                return equipmentController._setUpdate( this, work, req.body );
             })
             .then(( res ) => {
-                if( !replySent ){
-                    reply.send({ OK: doc });
+                Msg.debug( 'equipmentController.rtSetByClass() res=', res );
+                if( res.ERR ){
+                    reply.send({ ERR: res.ERR });
+                } else {
+                    reply.send({ OK: res.doc });
                 }
             });
     },

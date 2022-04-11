@@ -79,7 +79,7 @@ export const counterController = {
     },
 
     /*
-     * Set the lastId to the given value BUT IF AND ONLY IF this given value is at least equal to the existing lastId
+     * Set the lastId to the given value IF AND ONLY IF this given value is greater than the existing lastId
      * Expects body-data: {id:<id>}
      * Reply with the new lastId value
      */
@@ -89,7 +89,7 @@ export const counterController = {
         counterModel.read( this, query )
             .then(( res ) => { return counterController.fill( this, query, res ); })
             .then(( res ) => {
-                const newId = 0 + req.body.id;
+                const newId = Math.floor( req.body.id );
                 Msg.debug( 'counterController.setId() lastId='+res.lastId, 'newId='+newId );
                 if( res.lastId > 0 && res.lastId < newId ){
                     Msg.debug( 'counterController.setId() setting lastId to newId' );
