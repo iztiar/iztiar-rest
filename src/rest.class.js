@@ -17,7 +17,8 @@ export class Rest {
         },
         REST: {
             host: 'localhost',
-            port: 24011
+            port: 24011,
+            urlPrefix: "/v1"
         }
     };
 
@@ -288,6 +289,9 @@ export class Rest {
             }
             if( !_config.REST.port ){
                 _config.REST.port = Rest.d.REST.port;
+            }
+            if( !_config.REST.urlPrefix ){
+                _config.REST.urlPrefix = Rest.d.REST.urlPrefix;
             }
             // the REST server requires TLS connections
             // reading server key and cert files may also throw exceptions, which is acceptable here

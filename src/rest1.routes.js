@@ -12,7 +12,7 @@ export const rest1 = {
      */
     setRoutes: function( provider, fastify ){
 
-        const _rootRoute = function( fast, opts, done ){
+        const _rootRoutes = function( fast, opts, done ){
             fast.get( '/', ( req, reply ) => {
                 const hello = provider.getCapability( 'helloMessage' );
                 if( hello ){
@@ -21,18 +21,21 @@ export const rest1 = {
                     return {};
                 }
             });
+            fast.get( '/last', ( req, reply ) => { reply.send({ last: provider.feature().config().urlPrefix }); });
             done();
         };
+
+        const v1Prefix = "/v1";
 
         const _v1Routes = function( fast, opts, done ){
             fast.get( '/adm', ( req, reply ) => { adm.list( provider, fast, req, reply ); });
-            adm.installRoutes( provider, fast, counterRoutes );
-            adm.installRoutes( provider, fast, equipmentRoutes );
-            adm.installRoutes( provider, fast, zoneRoutes );
+            adm.installRoutes( provider, fast, v1Prefix, counterRoutes );
+            adm.installRoutes( provider, fast, v1Prefix, equipmentRoutes );
+            adm.installRoutes( provider, fast, v1Prefix, zoneRoutes );
             done();
         };
 
-        fastify.register( _rootRoute );
-        fastify.register( _v1Routes, { prefix: '/v1' });
+        fastify.register( _rootRoutes );
+        fastify.register( _v1Routes, { prefix: v1Prefix });
     }
 };

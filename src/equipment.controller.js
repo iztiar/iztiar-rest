@@ -56,6 +56,7 @@ export const equipmentController = {
      *      doc: current or new document
      *      set: update to later send to mongo.update()
      *      isNew: true|false
+     *      add: true|false
      *  }
      * @returns {Promise} which resolves with an object work = {
      *      doc:
@@ -69,13 +70,14 @@ export const equipmentController = {
     _setUpdate: function( fastify, work, update ){
         const Msg = fastify.featureProvider.api().exports().Msg;
         // fields that we want check before update
-        const fields = [ 'name', 'zoneId', 'powerSource', 'classId' ];
+        let checked = [];
         return Promise.resolve( true )
             // if a name update is requested, check that the new name doesn't already exist
             //  unchanged name is just ignored
             //  changing the name of a new doc is wrong
             .then(() => {
                 if( Object.keys( update ).includes( 'name' )){
+                    checked.push( 'name' );
                     const _newName = update.name;
                     if( !_newName || !_newName.length ){
                         work.ERR = 'Refusing to update to an empty equipment name';
@@ -103,6 +105,7 @@ export const equipmentController = {
             .then(() => {
                 if( !work.ERR ){
                     if( Object.keys( update ).includes( 'zoneId' )){
+                        checked.push( 'zoneId' );
                         const _newZone = update.zoneId;
                         if( _newZone != work.doc.zoneId ){
                             // clearing the zone
@@ -133,6 +136,7 @@ export const equipmentController = {
             .then(() => {
                 if( !work.ERR ){
                     if( Object.keys( update ).includes( 'powerSource' )){
+                        checked.push( 'powerSource' );
                         let _value = update.powerSource;
                         if( !equipmentController.powerSources.includes( _value )){
                             work.ERR = 'Unmanaged power source \''+_value+'\', update refused';
@@ -148,6 +152,7 @@ export const equipmentController = {
             .then(() => {
                 if( !work.ERR ){
                     if( Object.keys( update ).includes( 'classId' )){
+                        checked.push( 'classId' );
                         let _value = Math.floor( update.classId );
                         if( work.doc.classId !== _value ){
                             work.doc.classId = _value;
@@ -157,23 +162,37 @@ export const equipmentController = {
                 }
             })
             // does it have other fields or a sub-document ?
+            // whe manage two ways of updating a subdocument:
+            //  - replacing existing subdoc with the one provided
+            //  - adding to existing subdoc the keys provided
             .then(() => {
                 if( !work.ERR ){
                     Object.keys( update ).every(( k ) => {
-                        if( !fields.includes( k )){
+                        if( !checked.includes( k )){
+                            Msg.debug( 'equipmentController._setUpdate() work=', work, 'update=', update, 'k='+k, typeof update[k] );
                             if( typeof update[k] === 'object' ){
-                                work.doc[k] = {
-                                    ...work.doc[k],
-                                    ...update[k]
-                                };
-                                work.set[k] = {
-                                    ...work.doc[k],
-                                    ...update[k]
-                                };
+                                if( work.add ){
+                                    if( !work.doc[k] ){
+                                        work.doc[k] = {};
+                                    }
+                                    Object.keys( update[k] ).every(( subk ) => {
+                                        work.doc[k][subk] = update[k][subk];
+                                        work.set[k+'.'+subk] = update[k][subk];
+                                        return true;
+                                    });
+                                } else {
+                                    work.doc[k] = {
+                                        ...update[k]
+                                    };
+                                    work.set[k] = {
+                                        ...update[k]
+                                    };
+                                }
                             } else if( work.doc[k] !== update[k] ){
                                 work.doc[k] = update[k];
                                 work.set[k] = update[k];
                             }
+                            Msg.debug( 'equipmentController._setUpdate() new work=', work );
                         }
                         return true;
                     });
@@ -219,7 +238,33 @@ export const equipmentController = {
     },
 
     /**
-     * Reply with OK
+     * Create/Update an equipment
+     * @param {Object} req the request
+     * @param {Object} reply the object to reply to
+     * Expects "body=JSON data"
+     * Reply with the OK: created/updated doc or ERR: reason
+     */
+    rtAddByClass: function( req, reply ){
+        equipmentController.rtSetByClass.apply( this, [ req, reply, true ]);
+    },
+
+    /**
+     * Create/Update an equipment
+     * @param {Object} req the request
+     * @param {Object} reply the object to reply to
+     * Expects "body=JSON data"
+     * Reply with the OK: created/updated doc or ERR: reason
+     * Can be updated: name, zone, class name and id, power source and type
+     * May have a sub-document with the className as key
+     */
+    rtAddByName: function( req, reply ){
+        equipmentController.rtSetByName.apply( this, [ req, reply, true ]);
+    },
+
+    /**
+     * @param {Object} req the request
+     * @param {Object} reply the object to reply to
+     * Reply with OK|ERR
      */
     rtDelete: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
@@ -279,6 +324,7 @@ export const equipmentController = {
      * @param {Object} req the request
      * @param {Object} reply the object to reply to
      * Reply with the list of equipments which are in this named zone
+     * name may be empty: returns equipments which do not have a zone
      */
     rtGetByZone: function( req, reply ){
         const Msg = this.featureProvider.api().exports().Msg;
@@ -338,11 +384,13 @@ export const equipmentController = {
      * Create/Update an equipment
      * @param {Object} req the request
      * @param {Object} reply the object to reply to
+     * @param {Boolean} add whether subdocuments should be incremented (add=true) or replaced
      * Expects "body=JSON data"
      * Reply with the OK: created/updated doc or ERR: reason
      */
-     rtSetByClass: function( req, reply ){
+    rtSetByClass: function( req, reply, add=false ){
         const Msg = this.featureProvider.api().exports().Msg;
+        Msg.debug( 'equipmentController.rtSetByClass() req.params=', req.params, 'add='+add );
         if( !req.params.name || !req.params.name.length ){
             reply.send({ ERR: 'Empty class name, ignoring request' });
             return;
@@ -352,11 +400,14 @@ export const equipmentController = {
             reply.send({ ERR: 'Empty class id, ignoring request' });
             return;
         }
-        let work = {};
+        let work = { add: add };
         req.params.id = Math.floor( req.params.id );
         equipmentController._getDocument( this, { className: req.params.name, classId: req.params.id })
             .then(( res ) => {
-                work = { ...res };
+                work = {
+                    ...work,
+                    ...res
+                };
                 if( work.isNew ){
                     work.doc.className = req.params.name;
                     work.doc.classId = req.params.id;
@@ -392,21 +443,25 @@ export const equipmentController = {
      * Create/Update an equipment
      * @param {Object} req the request
      * @param {Object} reply the object to reply to
+     * @param {Boolean} add whether subdocuments should be incremented (add=true) or replaced
      * Expects "body=JSON data"
      * Reply with the OK: created/updated doc or ERR: reason
      * Can be updated: name, zone, class name and id, power source and type
-     * May have a sub-document with the className as key
      */
-    rtSetByName: function( req, reply ){
+    rtSetByName: function( req, reply, add=false ){
         const Msg = this.featureProvider.api().exports().Msg;
+        Msg.debug( 'equipmentController.rtSetByName() req.params=', req.params, 'add='+add );
         if( !req.params.name || !req.params.name.length ){
             reply.send({ ERR: 'Empty equipment name, ignoring request' });
             return;
         }
-        let work = {};
+        let work = { add: add };
         equipmentController._getDocument( this, { name: req.params.name })
             .then(( res ) => {
-                work = { ...res };
+                work = {
+                    ...work,
+                    ...res
+                };
                 if( work.isNew ){
                     work.doc.name = req.params.name;
                     work.set = { ...work.doc };

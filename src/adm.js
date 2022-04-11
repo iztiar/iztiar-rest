@@ -31,13 +31,14 @@ export const adm = {
     /**
      * @param {featureProvider} provider 
      * @param {fastify} fastify 
+     * @param {String} prefix
      * @param {Object[]} routes
      */
-    installRoutes: function( provider, fastify, routes ){
+    installRoutes: function( provider, fastify, prefix, routes ){
         routes.every(( r ) => {
             fastify.featureProvider = provider;
             fastify.route( r );
-            adm.definedRoutes.push({ method:r.method, url:r.url });
+            adm.definedRoutes.push({ method:r.method, url:prefix+r.url });
             return true;
         });
     },

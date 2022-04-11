@@ -58,6 +58,11 @@
                                     "description": "path to the server private key"
                                 }
                             }
+                        },
+                        "urlPrefix": {
+                            "type": "string",
+                            "description": "the version prefix to be used in the URLs",
+                            "default": "/v1"
                         }
                     }
                 }
