@@ -57,6 +57,7 @@ export const equipmentController = {
      *      set: update to later send to mongo.update()
      *      isNew: true|false
      *      add: true|false
+     *      upsertQuery
      *  }
      * @returns {Promise} which resolves with an object work = {
      *      doc:
@@ -65,7 +66,7 @@ export const equipmentController = {
      *      ERR: reason
      *  }
      * Can be updated: name, zone, class name and id, power source and type
-     * May have a sub-document with the className as key
+     * May have sub-documents
      */
     _setUpdate: function( fastify, work, update ){
         const Msg = fastify.featureProvider.api().exports().Msg;
@@ -204,7 +205,7 @@ export const equipmentController = {
                 Msg.debug( 'equipmentController._setUpdate() work=', work );
                 if( !work.ERR ){
                     if( work.isNew || Object.keys( work.set ).length > 0 ){
-                        return equipmentModel.write( fastify, { name: work.doc.name }, work.set );
+                        return equipmentModel.write( fastify, work.upsertQuery, work.set );
                     } else {
                         Msg.verbose( 'equipmentController._setUpdate() ignoring empty update set' );
                     }
@@ -400,9 +401,12 @@ export const equipmentController = {
             reply.send({ ERR: 'Empty class id, ignoring request' });
             return;
         }
-        let work = { add: add };
+        let work = {
+            add: add,
+            upsertQuery: { className: req.params.name, classId: Math.floor( req.params.id )}
+        };
         req.params.id = Math.floor( req.params.id );
-        equipmentController._getDocument( this, { className: req.params.name, classId: req.params.id })
+        equipmentController._getDocument( this, work.upsertQuery )
             .then(( res ) => {
                 work = {
                     ...work,
@@ -418,7 +422,7 @@ export const equipmentController = {
                 return Promise.resolve( work );
             })
             .then(() => {
-                if( work.isNew && !Object.keys( req.body ).includes( 'name' )){
+                if( work.isNew ){
                     equipmentController._uniqueName( this, work.doc.className+'-'+work.doc.classId )
                         .then(( res ) => {
                             work.doc.name = res;
@@ -455,8 +459,11 @@ export const equipmentController = {
             reply.send({ ERR: 'Empty equipment name, ignoring request' });
             return;
         }
-        let work = { add: add };
-        equipmentController._getDocument( this, { name: req.params.name })
+        let work = {
+            add: add,
+            upsertQuery: { name: req.params.name }
+        };
+        equipmentController._getDocument( this, work.upsertQuery )
             .then(( res ) => {
                 work = {
                     ...work,

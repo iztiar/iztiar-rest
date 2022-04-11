@@ -1,0 +1,49 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/iztiar/iztiar-core/schemas/db.command.schema.json",
+    "title": "dbCommand",
+    "description": "A command, maybe a read-only information, which may be pulled or only pushed by the device, or a writable property or an action",
+    "type": "object",
+    "properties" : {
+        "name": {
+            "type": "string",
+            "description": "the command friendly name"
+        },
+        "cmdId": {
+            "type": "integer",
+            "description": "the command identifier"
+        },
+        "classId": {
+            "type": "integer",
+            "description": "the command identifier in the managing class"
+        },
+        "equipId": {
+            "type": "integer",
+            "description": "the equipment identifier the command is attached to"
+        },
+        "readable": {
+            "type": "boolean",
+            "description": "whether the command is readable, i.e. accepts to receive a value request"
+        },
+        "writable": {
+            "type": "boolean",
+            "description": "whether the command is writable, i.e. accepts to receive values pushed to the device"
+        },
+        "historized": {
+            "type": "boolean",
+            "description": "whether the received values should be historized"
+        },
+        "notes": {
+            "type": "string",
+            "description": "notes attached to the command"
+        },
+        "createdAt": {
+            "type": "timestamp",
+            "description": "the creation timestamp"
+        },
+        "updatedAt": {
+            "type": "timestamp",
+            "description": "the last update timestamp"
+        }
+    }
+}

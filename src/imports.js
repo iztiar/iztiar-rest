@@ -2,6 +2,9 @@
  * imports.js
  */
 export * from './adm.js';
+export * from './command.controller.js';
+export * from './command.model.js';
+export * from './command.routes.js';
 export * from './counter.controller.js';
 export * from './counter.model.js';
 export * from './counter.routes.js';

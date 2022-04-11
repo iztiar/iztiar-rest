@@ -34,6 +34,10 @@
             "type": "string",
             "properties": "type of used batteries (if any)"
         },
+        "notes": {
+            "type": "string",
+            "description": "notes attached to the equipment"
+        },
         "createdAt": {
             "type": "timestamp",
             "description": "the creation timestamp"

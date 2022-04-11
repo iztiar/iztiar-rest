@@ -2,7 +2,7 @@
  * rest1.routes.js
  *  v1 API
  */
-import { counterRoutes, equipmentRoutes, zoneRoutes, adm } from './imports.js';
+import { commandRoutes, counterRoutes, equipmentRoutes, zoneRoutes, adm } from './imports.js';
 
 export const rest1 = {
 
@@ -29,6 +29,7 @@ export const rest1 = {
 
         const _v1Routes = function( fast, opts, done ){
             fast.get( '/adm', ( req, reply ) => { adm.list( provider, fast, req, reply ); });
+            adm.installRoutes( provider, fast, v1Prefix, commandRoutes );
             adm.installRoutes( provider, fast, v1Prefix, counterRoutes );
             adm.installRoutes( provider, fast, v1Prefix, equipmentRoutes );
             adm.installRoutes( provider, fast, v1Prefix, zoneRoutes );
