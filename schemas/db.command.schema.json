@@ -15,7 +15,7 @@
         },
         "classId": {
             "type": "integer",
-            "description": "the command identifier in the managing class"
+            "description": "the internal command identifier inside of the managing equipment"
         },
         "equipId": {
             "type": "integer",

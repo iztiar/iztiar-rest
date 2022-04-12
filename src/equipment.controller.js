@@ -224,7 +224,7 @@ export const equipmentController = {
         const _fTest = function( test ){
             return new Promise(( resolve, reject ) => {
                 Msg.debug( 'equipmentController.uniqueName() testing '+test );
-                equipmentModel.readOne( fastify, { name: test })
+                return equipmentModel.readOne( fastify, { name: test })
                     .then(( res ) => {
                         Msg.debug( 'equipmentController.uniqueName() res=', res );
                         if( res ){
@@ -423,7 +423,7 @@ export const equipmentController = {
             })
             .then(() => {
                 if( work.isNew ){
-                    equipmentController._uniqueName( this, work.doc.className+'-'+work.doc.classId )
+                    return equipmentController._uniqueName( this, work.doc.className+'-'+work.doc.classId )
                         .then(( res ) => {
                             work.doc.name = res;
                             work.set.name = res;

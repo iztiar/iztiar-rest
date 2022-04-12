@@ -176,7 +176,7 @@ export const commandController = {
         const _fTest = function( test ){
             return new Promise(( resolve, reject ) => {
                 Msg.debug( 'commandController.uniqueName() testing '+test );
-                commandModel.readOne( fastify, { name: test })
+                return commandModel.readOne( fastify, { name: test })
                     .then(( res ) => {
                         Msg.debug( 'commandController.uniqueName() res=', res );
                         if( res ){
@@ -291,7 +291,7 @@ export const commandController = {
                 })
                 .then(() => {
                     if( work.isNew && !Object.keys( req.body ).includes( 'name' )){
-                        commandController._uniqueName( this, 'cmd-'+work.doc.equipId+'-'+work.doc.classId )
+                        return commandController._uniqueName( this, 'cmd-'+work.doc.equipId+'-'+work.doc.classId )
                             .then(( res ) => {
                                 work.doc.name = res;
                                 work.set.name = res;
