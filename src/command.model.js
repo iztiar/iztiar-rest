@@ -1,13 +1,13 @@
 /*
  * commands.model.js
  */
-import { zoneModel } from './imports.js';
+import { equipmentModel,  } from './imports.js';
 
 export const commandModel = {
 
     COLLECTION: 'commands',
 
-    // returns a '$lookup' aggregate object array which adds the 'zoneName' to the output documents set
+    // returns a '$lookup' aggregate object array which adds the 'equipment.className' to the output documents set
     _lookup: function( query ){
         if( !query ){
             query = {};
@@ -18,9 +18,9 @@ export const commandModel = {
             },
         },{
             $lookup: {
-                from: zoneModel.COLLECTION,
-                localField: 'zoneId',
-                foreignField: 'name',
+                from: equipmentModel.COLLECTION,
+                localField: 'equipId',
+                foreignField: 'equipId',
                 as: '_pa'
             }
         },{
@@ -29,7 +29,8 @@ export const commandModel = {
             }
         }, {
             $set: {
-                zoneName: { $ifNull: [ "$_pb.name", "" ]}
+                equipName: "$_pb.name",
+                className: { $ifNull: [ "$_pb.className", "" ]}
             }
         },{
             $unset: [ "_pa", "_pb" ]
@@ -86,7 +87,7 @@ export const commandModel = {
      */
     list: function( fastify ){
         return new Promise(( resolve, reject ) => {
-            fastify.mongo.db.collection( commandModel.COLLECTION ).aggregate( zoneModel._lookup()).toArray(( err, res ) => {
+            fastify.mongo.db.collection( commandModel.COLLECTION ).aggregate( commandModel._lookup()).toArray(( err, res ) => {
                 if( err ){
                     fastify.featureProvider.api().exports().Msg.error( 'commandModel.list() error=', err );
                     return resolve( [] );

@@ -20,7 +20,7 @@ export const equipmentModel = {
             $lookup: {
                 from: zoneModel.COLLECTION,
                 localField: 'zoneId',
-                foreignField: 'name',
+                foreignField: 'zoneId',
                 as: '_pa'
             }
         },{
@@ -33,7 +33,7 @@ export const equipmentModel = {
             }
         },{
             $unset: [ "_pa", "_pb" ]
-        }]
+        }];
     },
 
     /*
@@ -86,7 +86,7 @@ export const equipmentModel = {
      */
     list: function( fastify ){
         return new Promise(( resolve, reject ) => {
-            fastify.mongo.db.collection( equipmentModel.COLLECTION ).aggregate( zoneModel._lookup()).toArray(( err, res ) => {
+            fastify.mongo.db.collection( equipmentModel.COLLECTION ).aggregate( equipmentModel._lookup()).toArray(( err, res ) => {
                 if( err ){
                     fastify.featureProvider.api().exports().Msg.error( 'equipmentModel.list() error=', err );
                     return resolve( [] );
