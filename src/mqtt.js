@@ -14,8 +14,9 @@ export const mqtt = {
      * @param {Rest} Instance
      * @param {String} topic
      * @param {String} payload
+     * @param {Object} options
      */
-    publish( instance, topic, payload ){
+    publish( instance, topic, payload, options ){
         const Msg = instance.api().exports().Msg;
         if( mqtt.connection ){
             let _topic = mqtt.publishTopic;
@@ -23,7 +24,10 @@ export const mqtt = {
                 _topic += '/';
             }
             _topic += topic;
-            mqtt.connection.publish( _topic, payload, { retain: true });
+            const _options = {
+                ...options
+            }
+            mqtt.connection.publish( _topic, payload, _options );
         } else {
             Msg.warn( 'mqtt.publish() no client connection' );
         }

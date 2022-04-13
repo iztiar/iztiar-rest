@@ -6,7 +6,7 @@ import { counterController, equipmentModel, zoneModel, adm, mqtt } from './impor
 export const zoneController = {
 
     COLUMNS: [ 'name', 'zoneId', 'parentId', 'parentName', 'createdAt', 'updatedAt' ],
-    PUBS: [ 'name', 'zoneId', 'parentId', 'createdAt', 'updatedAt' ],
+    UNPUBLISHED: [ '_id', 'zoneId', 'parentName' ],
 
     /**
      * @returns {Promise} which resolves to true|false
@@ -58,7 +58,7 @@ export const zoneController = {
     publishAll( fastify ){
         zoneModel.list( fastify )
             .then(( res ) => {
-                adm.filter( res, zoneController.PUBS ).every(( doc ) => {
+                res.every(( doc ) => {
                     zoneController.publishDoc( fastify, doc );
                     return true;
                 })
@@ -66,12 +66,13 @@ export const zoneController = {
     },
 
     // publish the current document
+    //adm.filter( res, zoneController.PUBS ).every(( doc ) => {
     publishDoc: function( fastify, doc ){
         let id = doc.zoneId;
         Object.keys( doc ).every(( k ) => {
-            if( k !== 'zoneId' ){
+            if( !zoneController.UNPUBLISHED.includes( k )){
                 const topic = 'zone/'+id+'/'+k;
-                mqtt.publish( fastify.featureProvider, topic, doc[k] );
+                mqtt.publish( fastify.featureProvider, topic, doc[k], { retain: true });
             }
             return true;
         })

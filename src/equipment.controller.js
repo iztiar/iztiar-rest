@@ -6,7 +6,7 @@ import { counterController, equipmentModel, zoneModel, adm, mqtt } from './impor
 export const equipmentController = {
 
     COLUMNS: [ 'name', 'equipId', 'className', 'classId', 'zoneId', 'zoneName', 'powerSource', 'powerType', 'createdAt', 'updatedAt' ],
-    PUBS: [ 'name', 'equipId', 'className', 'classId', 'zoneId', 'powerSource', 'powerType', 'createdAt', 'updatedAt' ],
+    UNPUBLISHED: [ '_id', 'equipId', 'zoneName' ],
     powerSources: [ 'sector', 'battery' ],
 
     /*
@@ -55,7 +55,7 @@ export const equipmentController = {
     publishAll( fastify ){
         equipmentModel.list( fastify )
             .then(( res ) => {
-                adm.filter( res, equipmentController.PUBS ).every(( doc ) => {
+                res.every(( doc ) => {
                     equipmentController.publishDoc( fastify, doc );
                     return true;
                 })
@@ -66,9 +66,9 @@ export const equipmentController = {
     publishDoc: function( fastify, doc ){
         let id = doc.equipId;
         Object.keys( doc ).every(( k ) => {
-            if( k !== 'equipId' ){
+            if( !equipmentController.UNPUBLISHED.includes( k )){
                 const topic = 'equipment/'+id+'/'+k;
-                mqtt.publish( fastify.featureProvider, topic, doc[k] );
+                mqtt.publish( fastify.featureProvider, topic, doc[k], { retain: true });
             }
             return true;
         })

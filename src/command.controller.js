@@ -6,7 +6,7 @@ import { counterController, commandModel, zoneModel, adm, mqtt } from './imports
 export const commandController = {
 
     COLUMNS: [ 'name', 'cmdId', 'equipName', 'equipId', 'className', 'classId', 'readable', 'writable', 'historized', 'createdAt', 'updatedAt' ],
-    PUBS: [ 'name', 'cmdId', 'equipId', 'className', 'classId', 'readable', 'writable', 'historized', 'createdAt', 'updatedAt' ],
+    UNPUBLISHED: [ '_id', 'cmdId', 'equipName' ],
 
     /*
      * Retrieves either an existing document, or a new one
@@ -54,7 +54,7 @@ export const commandController = {
     publishAll( fastify ){
         commandModel.list( fastify )
             .then(( res ) => {
-                adm.filter( res, commandController.PUBS ).every(( doc ) => {
+                res.every(( doc ) => {
                     commandController.publishDoc( fastify, doc );
                     return true;
                 })
@@ -65,9 +65,9 @@ export const commandController = {
     publishDoc: function( fastify, doc ){
         let id = doc.cmdId;
         Object.keys( doc ).every(( k ) => {
-            if( k !== 'cmdId' ){
+            if( !commandController.UNPUBLISHED.includes( k )){
                 const topic = 'command/'+id+'/'+k;
-                mqtt.publish( fastify.featureProvider, topic, doc[k] );
+                mqtt.publish( fastify.featureProvider, topic, doc[k], { retain: true });
             }
             return true;
         })
