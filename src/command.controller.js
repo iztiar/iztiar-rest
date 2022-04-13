@@ -1,11 +1,12 @@
 /*
  * commands.controller.js
  */
-import { counterController, commandModel, zoneModel, adm } from './imports.js';
+import { counterController, commandModel, zoneModel, adm, mqtt } from './imports.js';
 
 export const commandController = {
 
     COLUMNS: [ 'name', 'cmdId', 'equipName', 'equipId', 'className', 'classId', 'readable', 'writable', 'historized', 'createdAt', 'updatedAt' ],
+    PUBS: [ 'name', 'cmdId', 'equipId', 'className', 'classId', 'readable', 'writable', 'historized', 'createdAt', 'updatedAt' ],
 
     /*
      * Retrieves either an existing document, or a new one
@@ -47,6 +48,29 @@ export const commandController = {
                 }
                 return Promise.resolve( answer );
             });
+    },
+
+    // list known instances
+    publishAll( fastify ){
+        commandModel.list( fastify )
+            .then(( res ) => {
+                adm.filter( res, commandController.PUBS ).every(( doc ) => {
+                    commandController.publishDoc( fastify, doc );
+                    return true;
+                })
+            });
+    },
+
+    // publish the current document
+    publishDoc: function( fastify, doc ){
+        let id = doc.cmdId;
+        Object.keys( doc ).every(( k ) => {
+            if( k !== 'cmdId' ){
+                const topic = 'command/'+id+'/'+k;
+                mqtt.publish( fastify.featureProvider, topic, doc[k] );
+            }
+            return true;
+        })
     },
 
     /*
@@ -306,6 +330,7 @@ export const commandController = {
                     if( res.ERR ){
                         reply.send({ ERR: res.ERR });
                     } else {
+                        commandController.publishDoc( this, res.doc );
                         reply.send({ OK: res.doc });
                     }
                 });
@@ -346,6 +371,7 @@ export const commandController = {
                     if( res.ERR ){
                         reply.send({ ERR: res.ERR });
                     } else {
+                        commandController.publishDoc( this, res.doc );
                         reply.send({ OK: res.doc });
                     }
                 });

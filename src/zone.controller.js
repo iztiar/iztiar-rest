@@ -1,11 +1,12 @@
 /*
  * counters.controller.js
  */
-import { counterController, equipmentModel, zoneModel, adm } from './imports.js';
+import { counterController, equipmentModel, zoneModel, adm, mqtt } from './imports.js';
 
 export const zoneController = {
 
     COLUMNS: [ 'name', 'zoneId', 'parentId', 'parentName', 'createdAt', 'updatedAt' ],
+    PUBS: [ 'name', 'zoneId', 'parentId', 'createdAt', 'updatedAt' ],
 
     /**
      * @returns {Promise} which resolves to true|false
@@ -51,6 +52,29 @@ export const zoneController = {
             .then(( res ) => {
                 return Promise.resolve( res );
             });
+    },
+
+    // list known instances
+    publishAll( fastify ){
+        zoneModel.list( fastify )
+            .then(( res ) => {
+                adm.filter( res, zoneController.PUBS ).every(( doc ) => {
+                    zoneController.publishDoc( fastify, doc );
+                    return true;
+                })
+            });
+    },
+
+    // publish the current document
+    publishDoc: function( fastify, doc ){
+        let id = doc.zoneId;
+        Object.keys( doc ).every(( k ) => {
+            if( k !== 'zoneId' ){
+                const topic = 'zone/'+id+'/'+k;
+                mqtt.publish( fastify.featureProvider, topic, doc[k] );
+            }
+            return true;
+        })
     },
 
     /**
@@ -136,7 +160,7 @@ export const zoneController = {
      * @param {Object} reply the object to reply to
      * Reply with the list of at-the-moment-used counters (which may be empty)
      */
-     rtList: function( req, reply ){
+    rtList: function( req, reply ){
         zoneModel.list( this )
             .then(( res ) => {
                 const Msg = this.featureProvider.api().exports().Msg;
@@ -260,6 +284,7 @@ export const zoneController = {
             })
             .then(( res ) => {
                 if( !replySent ){
+                    zoneController.publishDoc( this, doc );
                     reply.send({ OK: doc });
                 }
             });

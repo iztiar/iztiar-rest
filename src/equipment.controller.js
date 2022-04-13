@@ -1,11 +1,12 @@
 /*
  * equipments.controller.js
  */
-import { counterController, equipmentModel, zoneModel, adm } from './imports.js';
+import { counterController, equipmentModel, zoneModel, adm, mqtt } from './imports.js';
 
 export const equipmentController = {
 
     COLUMNS: [ 'name', 'equipId', 'className', 'classId', 'zoneId', 'zoneName', 'powerSource', 'powerType', 'createdAt', 'updatedAt' ],
+    PUBS: [ 'name', 'equipId', 'className', 'classId', 'zoneId', 'powerSource', 'powerType', 'createdAt', 'updatedAt' ],
     powerSources: [ 'sector', 'battery' ],
 
     /*
@@ -48,6 +49,29 @@ export const equipmentController = {
                 }
                 return Promise.resolve( answer );
             });
+    },
+
+    // list known instances
+    publishAll( fastify ){
+        equipmentModel.list( fastify )
+            .then(( res ) => {
+                adm.filter( res, equipmentController.PUBS ).every(( doc ) => {
+                    equipmentController.publishDoc( fastify, doc );
+                    return true;
+                })
+            });
+    },
+
+    // publish the current document
+    publishDoc: function( fastify, doc ){
+        let id = doc.equipId;
+        Object.keys( doc ).every(( k ) => {
+            if( k !== 'equipId' ){
+                const topic = 'equipment/'+id+'/'+k;
+                mqtt.publish( fastify.featureProvider, topic, doc[k] );
+            }
+            return true;
+        })
     },
 
     /*
@@ -438,6 +462,7 @@ export const equipmentController = {
                 if( res.ERR ){
                     reply.send({ ERR: res.ERR });
                 } else {
+                    equipmentController.publishDoc( this, res.doc );
                     reply.send({ OK: res.doc });
                 }
             });
@@ -485,6 +510,7 @@ export const equipmentController = {
                 if( res.ERR ){
                     reply.send({ ERR: res.ERR });
                 } else {
+                    equipmentController.publishDoc( this, res.doc );
                     reply.send({ OK: res.doc });
                 }
             });

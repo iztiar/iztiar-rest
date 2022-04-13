@@ -7,7 +7,7 @@ import Fastify from 'fastify';
 import pino from 'pino';
 import EventEmitter from 'events';
 
-import { mongo, rest1 } from './imports.js';
+import { commandController, equipmentController, zoneController, mongo, mqtt, rest1 } from './imports.js';
 
 export class Rest {
 
@@ -149,6 +149,7 @@ export class Rest {
                 .then(() => { this._started = exports.utils.now(); })
                 .then(() => { this.IMqttClient.connects(); })
                 .then(() => { this.restStart(); })
+                .then(() => { mqtt.start( this ); })
                 .then(() => { return new Promise(() => {}); });
         } else {
             return Promise.resolve( exports.IForkable.fork( name, cb, args ));
@@ -376,6 +377,17 @@ export class Rest {
     }
 
     /**
+     * Publish the whole db content to mqtt
+     */
+    restListAll(){
+        const fast = this._fastServer;
+        fast.featureProvider = this;
+        commandController.publishAll( fast );
+        equipmentController.publishAll( fast );
+        zoneController.publishAll( fast );
+    }
+
+    /**
      * Start the REST server
      * and initialize the mongodb connection
      */
@@ -410,6 +422,7 @@ export class Rest {
                 } else {
                     this._fastServer.log.info( 'Rest.restStart() fastify log listening', addr );
                     exports.Msg.verbose( 'Rest.restStart() msg log listening', addr );
+                    this.restListAll();
                 }
             });
         } catch( e ){
