@@ -1,6 +1,6 @@
 {
   "name": "@iztiar/iztiar-rest",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "type": "module",
   "description": "Provide a REST API to Iztiar family",
   "keywords": [
@@ -40,6 +40,6 @@
   },
   "engines": {
     "node": ">12.x",
-    "@iztiar/iztiar-core": ">0.8"
+    "@iztiar/iztiar-core": ">0.9"
   }
 }
