@@ -47,12 +47,19 @@ export const mqtt = {
      * @param {Rest} instance
      */
     start( instance ){
-        instance.api().exports().Msg.debug( 'mqtt.start()' );
+        const Msg = instance.api().exports().Msg;
+        Msg.debug( 'mqtt.start()' );
         const _clients = instance.IMqttClient.getConnections();
-        const _conf = instance.feature().config();
-        if( _clients[_conf.izMqtt] ){
-            mqtt.connection = _clients[_conf.izMqtt];
-            mqtt.connection.subscribe( mqtt.subscribedTopic, instance, mqtt.receive );
-        }
+        Object.keys( _clients ).every(( key ) => {
+            const _connect = _clients[key];
+            const _conf = _connect.config();
+            if( _conf.publications.documents ){
+                Msg.verbose( 'mqtt.start() identifying \''+key+'\' connection' );
+                mqtt.connection = _connect;
+                mqtt.connection.subscribe( mqtt.subscribedTopic, instance, mqtt.receive );
+                return false;
+            }
+            return true;
+        });
     }
 };
